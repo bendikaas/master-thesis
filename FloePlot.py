@@ -13,19 +13,6 @@ import matplotlib.lines as mlines
 from scipy.stats import chi2
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 
-# plt.rcParams.update({
-#     "text.usetex": True,
-#     "font.family": "serif",
-#     "font.size": 16,  # Match LaTeX document font size
-#     "axes.titlesize": 16,  # Match LaTeX document font size
-#     "axes.labelsize": 16,  # Match LaTeX document font size
-#     "xtick.labelsize": 14,  # Slightly smaller for ticks
-#     "ytick.labelsize": 14,  # Slightly smaller for ticks
-#     "legend.fontsize": 16,  # Match LaTeX document font size
-#     "figure.titlesize": 16,  # Match LaTeX document font size
-#     "text.latex.preamble": r"\usepackage{graphicx}"
-# })
-
 # ------------ REAL DATA ------------
 
 def show_raster(raster):
@@ -98,12 +85,7 @@ def plot_paths(floe_manager):
 
     all_floes = list(floe_manager.active_floes.values()) + list(floe_manager.lost_floes.values())
     for floe_idx, floe in enumerate(all_floes):
-        color = palette[floe_idx % len(palette) + 1]
-        # pred_color = palette[floe_idx % len(palette) + 2]
-        # back_color = palette[floe_idx % len(palette) + 3]
-        # color = 'orange'
-        pred_color = 'navy'
-        back_color = 'green'
+        color = palette[floe_idx % len(palette) + 1] # color for that floe
         floe_label = f'Floe {floe_idx}'
 
         # Label for floe ID
@@ -115,14 +97,14 @@ def plot_paths(floe_manager):
             predicted_path = np.array([(s[0, 0], s[1, 0]) for s in floe.predicted_states]) # EPSG:6052
             predicted_trans = [transformer.transform(x, y) for x, y in predicted_path] # EPSG:32630
             x_pred, y_pred = zip(*predicted_trans)
-            ax.plot(x_pred, y_pred, linestyle='--', color=pred_color, marker='o', label=None)
+            ax.plot(x_pred, y_pred, linestyle='--', color=color, marker='s', label=None)
 
         # plot backtracked path
         if len(floe.backtracked_states) > 0:
             backtracked_path = np.array([(s[0, 0], s[1, 0]) for s in floe.backtracked_states]) # EPSG:6052
             backtraced_trans = [transformer.transform(x, y) for x, y in backtracked_path] # EPSG:32630
             x_back, y_back = zip(*backtraced_trans)
-            ax.plot(x_back, y_back, linestyle='--', color=back_color, marker='o', label=None)
+            ax.plot(x_back, y_back, linestyle='--', color=color, marker='P', label=None)
 
         # Plot corrected path
         estimated_path = np.array([(s[0, 0], s[1, 0]) for s in floe.states])
@@ -131,16 +113,12 @@ def plot_paths(floe_manager):
             estimated_trans = [transformer.transform(x, y) for x, y in estimated_path]
             x, y = zip(*estimated_trans)
             ax.plot(x, y, marker='o', color=color, label=None)
-
-    # Add style legend (top left)
+            
     corrected_line = plt.Line2D([], [], color=color, linestyle='-', marker='o', label='Estimated Path')
-    forward_pred_line = plt.Line2D([], [], color=pred_color, linestyle='--', marker='o', label='Forward Prediction')
-    backward_pred_line = plt.Line2D([], [], color=back_color, linestyle='--', marker='o', label='Backward Prediction')
-    # style_legend = ax.legend(handles=[corrected_line, backward_pred_line], loc='upper left')
-    style_legend = ax.legend(handles=[corrected_line], loc='upper right')
-    # ax.add_artist(style_legend)
-
-    # Add floe ID legend (top right)
+    forward_pred_line = plt.Line2D([], [], color=color, linestyle='--', marker='s', label='Forward Prediction')
+    backward_pred_line = plt.Line2D([], [], color=color, linestyle='--', marker='P', label='Backward Prediction')
+    style_legend = ax.legend(handles=[corrected_line, forward_pred_line, backward_pred_line], loc='upper left')
+    ax.add_artist(style_legend)
     ax.legend(handles=legends, loc='upper right', title="Floe ID")
 
     ax.set_xlim(floe_manager.grid.east_min, floe_manager.grid.east_max)
@@ -150,7 +128,6 @@ def plot_paths(floe_manager):
     plt.ylabel("North [m]")
     plt.axis("equal")
     plt.grid(True)
-    plt.savefig('plot_paths_real.pdf', format='pdf')
     plt.show()
 
 # to plot we need to convert the floe paths in "EPSG:6052" to "EPSG:32630"
@@ -175,14 +152,11 @@ def plot_floe_paths_with_uncertainties(floe_manager):
 
     all_floes = list(floe_manager.active_floes.values()) + list(floe_manager.lost_floes.values())
     for floe_idx, floe in enumerate(all_floes):
-        est_color = palette[floe_idx % len(palette) + 1]
-        # est_color = 'orange'
-        pred_color = 'navy'
-        back_color = 'green'
+        color = palette[floe_idx % len(palette) + 1]
         floe_label = f'Floe {floe_idx}'
 
         # Label for floe ID
-        floe_line = plt.Line2D([], [], color=est_color, linestyle='-', marker='o', label=floe_label)
+        floe_line = plt.Line2D([], [], color=color, linestyle='-', marker='o', label=floe_label)
         legends.append(floe_line)
 
         # Plot predicted path
@@ -190,7 +164,7 @@ def plot_floe_paths_with_uncertainties(floe_manager):
             predicted_path = np.array([(s[0, 0], s[1, 0]) for s in floe.predicted_states])
             predicted_trans = [transformer.transform(x, y) for x, y in predicted_path]
             x_pred, y_pred = zip(*predicted_trans)
-            ax.plot(x_pred, y_pred, linestyle='--', color=pred_color, marker='o', label=None)
+            ax.plot(x_pred, y_pred, linestyle='--', color=color, marker='s', label=None)
 
             for state, P in zip(floe.predicted_states, floe.predicted_P_matrices):
                 x_state, y_state = state[0, 0], state[1, 0]
@@ -203,7 +177,7 @@ def plot_floe_paths_with_uncertainties(floe_manager):
                     width=2 * std_x * scale,
                     height=2 * std_y * scale,
                     angle=0,
-                    edgecolor=pred_color,
+                    edgecolor=color,
                     facecolor='none',
                     linestyle='--',
                     linewidth=1,
@@ -211,11 +185,12 @@ def plot_floe_paths_with_uncertainties(floe_manager):
                 )
                 ax.add_patch(ellipse)
 
+        # Plot bactracked path
         if len(floe.backtracked_states) > 0:
             backtracked_path = np.array([(s[0, 0], s[1, 0]) for s in floe.backtracked_states]) # EPSG:6052
             backtraced_trans = [transformer.transform(x, y) for x, y in backtracked_path] # EPSG:32630
             x_back, y_back = zip(*backtraced_trans)
-            ax.plot(x_back, y_back, linestyle='--', color=back_color, marker='o', label=None)
+            ax.plot(x_back, y_back, linestyle='--', color=color, marker='P', label=None)
 
             for state, P in zip(floe.backtracked_states, floe.backtracked_P_matrices):
                 x_state, y_state = state[0, 0], state[1, 0]
@@ -228,7 +203,7 @@ def plot_floe_paths_with_uncertainties(floe_manager):
                     width=2 * std_x * scale,
                     height=2 * std_y * scale,
                     angle=0,
-                    edgecolor=back_color,
+                    edgecolor=color,
                     facecolor='none',
                     linestyle='--',
                     linewidth=1,
@@ -241,7 +216,7 @@ def plot_floe_paths_with_uncertainties(floe_manager):
             corrected_path = np.array([(s[0, 0], s[1, 0]) for s in floe.states])
             corrected_trans = [transformer.transform(x, y) for x, y in corrected_path]
             x, y = zip(*corrected_trans)
-            ax.plot(x, y, marker='o', color=est_color, label=None)
+            ax.plot(x, y, marker='o', color=color, label=None)
 
             for state, P in zip(floe.states, floe.P_matrices):
                 x_state, y_state = state[0, 0], state[1, 0]
@@ -254,7 +229,7 @@ def plot_floe_paths_with_uncertainties(floe_manager):
                     width=2 * std_x * scale,
                     height=2 * std_y * scale,
                     angle=0,
-                    edgecolor=est_color,
+                    edgecolor=color,
                     facecolor='none',
                     linestyle=':',
                     linewidth=1,
@@ -262,23 +237,17 @@ def plot_floe_paths_with_uncertainties(floe_manager):
                 )
                 ax.add_patch(ellipse)
 
-
-    # Add style legend (top left)
-    corrected_line = plt.Line2D([], [], color=est_color, linestyle='-', marker='o', label='Estimated Path')
-    predicted_line = plt.Line2D([], [], color=pred_color, linestyle='--', marker='o', label='Forward Prediction')
-    backtrack_line = plt.Line2D([], [], color=back_color, linestyle='--', marker='o', label='Backward Prediction')
-    # style_legend = ax.legend(handles=[corrected_line, backtrack_line], loc='upper left')
-    style_legend = ax.legend(handles=[corrected_line], loc='upper right')
-    # ax.add_artist(style_legend)
-
-    # Add floe ID → color legend (top right)
+    corrected_line = plt.Line2D([], [], color=color, linestyle='-', marker='o', label='Estimated Path')
+    predicted_line = plt.Line2D([], [], color=color, linestyle='--', marker='s', label='Forward Prediction')
+    backtrack_line = plt.Line2D([], [], color=color, linestyle='--', marker='P', label='Backward Prediction')
+    style_legend = ax.legend(handles=[corrected_line, predicted_line, backtrack_line], loc='upper left')
+    ax.add_artist(style_legend)
     ax.legend(handles=legends, loc='upper right', title="Floe ID")
 
     plt.xlabel("East [m]")
     plt.ylabel("North [m]")
     plt.axis("equal")
     plt.grid(True)
-    plt.savefig('uncertainties_real.pdf', format='pdf')
     plt.show()
 
 def plot_P_evolution(floe_manager, floe_id):
@@ -319,7 +288,6 @@ def plot_P_evolution(floe_manager, floe_id):
     plt.grid(True)
     plt.legend()
     plt.tight_layout()
-    plt.savefig('P_evolution.pdf', format='pdf')
     plt.show()
 
 # plots the GT and noisy pos together with KF estimated pos and 95% CI
@@ -384,7 +352,6 @@ def plot_stats_of_floe(floe_manager, floe_id):
     plt.grid(True)
     plt.legend(loc='upper right')
     plt.tight_layout()
-    plt.savefig("floe_stat_x_real.pdf", format='pdf')
     plt.show()
 
     # Y direction
@@ -409,7 +376,6 @@ def plot_stats_of_floe(floe_manager, floe_id):
     plt.grid(True)
     plt.legend(loc='upper right')
     plt.tight_layout()
-    plt.savefig("floe_stats_y_real.pdf", format='pdf')
     plt.show()
 
 # ------------ SIMULATOR ------------
@@ -427,10 +393,10 @@ def plot_paths_sim(simulator, floe_manager=None):
 
     if simulator.GT_map is not None:
         h, w = simulator.GT_map.shape
-        # Standard image origin: top-left
+
         plt.imshow(simulator.GT_map, cmap='gray', origin='upper')
         plt.xlim(0, w)
-        plt.ylim(h, 0)  # top-down Y-axis
+        plt.ylim(h, 0)  # top down Y-axis
 
     # colors
     gt_color = 'limegreen'
@@ -464,8 +430,8 @@ def plot_paths_sim(simulator, floe_manager=None):
             path_in_pixels = [simulator.meters_to_pixels(x, y) for (x, y) in path]
             path_in_pixels = np.array(path_in_pixels)
 
-            # plt.plot(path_in_pixels[:, 0], path_in_pixels[:, 1], '-o', color=kalman_color, linewidth=1.5)
-            # legends.append(mlines.Line2D([], [], color=kalman_color, linestyle='-', marker='o', label='Estimated Path'))
+            plt.plot(path_in_pixels[:, 0], path_in_pixels[:, 1], '-o', color=kalman_color, linewidth=1.5)
+            legends.append(mlines.Line2D([], [], color=kalman_color, linestyle='-', marker='o', label='Estimated Path'))
 
             if len(floe.backtracked_states) > 0:
                 back_path = np.array([(state[0, 0], state[1, 0]) for state in floe.backtracked_states])
@@ -486,9 +452,7 @@ def plot_paths_sim(simulator, floe_manager=None):
     plt.legend(handles=legends, loc='upper right')
     plt.xlabel("East [pixels]")
     plt.ylabel("North [pixels]")
-
     plt.tight_layout(pad=0)
-    plt.savefig('plot_paths_sim.pdf', format='pdf')
     plt.show()
 
 # plots 2D path with 95% CI
@@ -502,7 +466,7 @@ def plot_map_with_uncertainties_sim(simulator, floe_manager):
         h, w = simulator.GT_map.shape
         plt.imshow(simulator.GT_map, cmap='gray', origin='upper')
         plt.xlim(0, w)
-        plt.ylim(h, 0)  # standard image coordinate system (Y down)
+        plt.ylim(h, 0)
 
     # Colors
     gt_color = 'limegreen'
@@ -521,8 +485,8 @@ def plot_map_with_uncertainties_sim(simulator, floe_manager):
         plt.plot(gt_path[:, 0], gt_path[:, 1], linestyle='-', marker='o', color=gt_color, linewidth=1.5)
         legends.append(mlines.Line2D([], [], color=gt_color, linestyle='-', marker='o', label='GT Path'))
         
-        # plt.plot(noisy_path[:, 0], noisy_path[:, 1], linestyle='dotted', marker='x', color=measurement_color, markersize=10, markeredgewidth=2)        
-        # legends.append(mlines.Line2D([], [], color=measurement_color, linestyle='dotted', marker='x', label='Measurements'))
+        plt.plot(noisy_path[:, 0], noisy_path[:, 1], linestyle='dotted', marker='x', color=measurement_color, markersize=10, markeredgewidth=2)        
+        legends.append(mlines.Line2D([], [], color=measurement_color, linestyle='dotted', marker='x', label='Measurements'))
 
         if len(floe.GT_backtracked_states) > 0:
             GT_backtrack = np.array([(s[0, 0], s[1, 0]) for s in floe.GT_backtracked_states])
@@ -535,8 +499,8 @@ def plot_map_with_uncertainties_sim(simulator, floe_manager):
             path_pixels = [simulator.meters_to_pixels(x, y) for (x, y) in path]
             path_pixels = np.array(path_pixels)
 
-            # plt.plot(path_pixels[:, 0], path_pixels[:, 1], linestyle='-', marker='o', color=kalman_color, linewidth=1.5)
-            # legends.append(mlines.Line2D([], [], color=kalman_color, linestyle='-', marker='o', label='Estimated Path'))
+            plt.plot(path_pixels[:, 0], path_pixels[:, 1], linestyle='-', marker='o', color=kalman_color, linewidth=1.5)
+            legends.append(mlines.Line2D([], [], color=kalman_color, linestyle='-', marker='o', label='Estimated Path'))
 
             for state, P in zip(floe.states, floe.P_matrices):
                 x, y = state[0, 0], state[1, 0]
@@ -617,7 +581,6 @@ def plot_map_with_uncertainties_sim(simulator, floe_manager):
     plt.ylabel("North [pixels]")
 
     plt.tight_layout(pad=0)
-    plt.savefig('plot_map_with_uncertainties_sim.pdf', format='pdf')
     plt.show()
 
 # plots the GT and noisy pos together with KF estimated pos and 95% CI
@@ -666,8 +629,9 @@ def plot_stats_of_floe_sim(simulator, floe_manager, floe_id):
     plt.figure(figsize=(10, 5))
     plt.plot(t_gt, gt_x, '-o', color="limegreen", label="Ground Truth")
     plt.plot(t_meas, meas_x, 'x', color="red", linestyle='dotted', label="Measurements")
-    # plt.plot(t_est, est_x, '-o', color="navy", label="Estimation")
-    # plt.fill_between(t_est, np.array(est_x) - 1.96 * np.array(std_x), np.array(est_x) + 1.96 * np.array(std_x), color="navy", alpha=0.2)
+    plt.plot(t_est, est_x, '-o', color="navy", label="Estimation")
+    plt.fill_between(t_est, np.array(est_x) - 1.96 * np.array(std_x), np.array(est_x) + 1.96 * np.array(std_x), color="navy", alpha=0.2)
+    
     if len(pred_x) > 0:
         plt.plot(t_pred, pred_x, '-o', color="navy")
         plt.fill_between(t_pred, np.array(pred_x) - 1.96 * np.array(pred_std_x),
@@ -684,15 +648,14 @@ def plot_stats_of_floe_sim(simulator, floe_manager, floe_id):
     plt.grid(True)
     plt.legend(loc='upper right')
     plt.tight_layout()
-    plt.savefig("floe_stat_x.pdf", format='pdf')
     plt.show()
 
     # Y direction
     plt.figure(figsize=(10, 5))
     plt.plot(t_gt, gt_y, '-o', color="limegreen", label="Ground Truth")
     plt.plot(t_meas, meas_y, 'x', color="red", linestyle='dotted', label="Measurements")
-    # plt.plot(t_est, est_y, '-o', color="navy", label="Estimation")
-    # plt.fill_between(t_est, np.array(est_y) - 1.96 * np.array(std_y), np.array(est_y) + 1.96 * np.array(std_y), color="navy", alpha=0.2)
+    plt.plot(t_est, est_y, '-o', color="navy", label="Estimation")
+    plt.fill_between(t_est, np.array(est_y) - 1.96 * np.array(std_y), np.array(est_y) + 1.96 * np.array(std_y), color="navy", alpha=0.2)
     
     if len(pred_y) > 0:
         plt.plot(t_pred, pred_y, '-o', color="navy")
@@ -710,18 +673,10 @@ def plot_stats_of_floe_sim(simulator, floe_manager, floe_id):
     plt.grid(True)
     plt.legend(loc='upper right')
     plt.tight_layout()
-    plt.savefig("floe_stats_y.pdf", format='pdf')
     plt.show()
 
-def plot_NEES(simulator, floe_manager, floe_id=0):
-    """
-    Compute and plot the NEES (Normalized Estimation Error Squared) for one floe
-    using GT_states, estimated states, and Kalman covariances.
-
-    Parameters:
-        floe_manager: tracking manager with estimated states
-        floe_id: ID of the floe to analyze
-    """
+# Compute and plot the NEES (Normalized Estimation Error Squared) for a floe with id floe_id
+def plot_NEES(simulator, floe_manager, floe_id = 0):
     nees_values = []
     state_dim = 4
 
@@ -758,17 +713,10 @@ def plot_NEES(simulator, floe_manager, floe_id=0):
     plt.tight_layout()
     plt.show()
 
-def plot_NIS(floe_manager, floe_id=0):
-    """
-    Compute and plot the NIS (Normalized Innovation Squared) for one floe.
-    NIS is computed only at timesteps where measurements are available.
-
-    Parameters:
-        floe_manager: tracking manager with estimated states
-        floe_id: ID of the floe to analyze
-    """
+# Compute and plot the NIS (Normalized Innovation Squared) for a floe with id floe_id
+def plot_NIS(floe_manager, floe_id = 0):
     nis_values = []
-    meas_dim = 2  # assuming you're only measuring position (x, y)
+    meas_dim = 2  # only measuring position (x, y)
 
     floe = floe_manager.active_floes.get(floe_id) or floe_manager.lost_floes.get(floe_id)
 
@@ -784,7 +732,6 @@ def plot_NIS(floe_manager, floe_id=0):
             continue
 
         meas = measurements[k]
-        print("Measurement[k]:", meas)
         if meas is None:
             nis_values.append(np.nan)
             continue
@@ -797,7 +744,6 @@ def plot_NIS(floe_manager, floe_id=0):
         z_pred = C @ x_est
         innov = z - z_pred
         S = C @ P @ C.T + R
-        print(f"Innovation at step {k}:", innov.flatten())
 
         try:
             nis = innov.T @ np.linalg.inv(S) @ innov
@@ -805,11 +751,9 @@ def plot_NIS(floe_manager, floe_id=0):
         except np.linalg.LinAlgError:
             nis_values.append(np.nan)
 
-    # Confidence interval for Chi² (2 DOF)
+    # Confidence interval for Chi squared, with 2 DOF
     lower = chi2.ppf(0.025, df=meas_dim)
     upper = chi2.ppf(0.975, df=meas_dim)
-
-    print("nis values:", nis_values)
 
     plt.figure(figsize=(10, 4))
     plt.plot(nis_values, label='NIS')
@@ -824,7 +768,7 @@ def plot_NIS(floe_manager, floe_id=0):
  # ------------ GRID ------------
 
 def visualize(grid):
-    arrow_scale = 200
+    arrow_scale = 25
     fig, ax = plt.subplots(figsize=(6, 6))
 
     distances_np = np.array(grid.distances)
@@ -860,8 +804,8 @@ def visualize(grid):
                 color = cmap(norm(dist)) if dist is not None else (0.7, 0.7, 0.7, 1)
                 ax.arrow(x, y, dx * arrow_scale, dy * arrow_scale,
                         fc=color, ec=color,
-                        head_width=10,
-                        head_length=15,
+                        head_width=2,
+                        head_length=2,
                         length_includes_head=True)
 
     # Colorbar with spacing and smaller size
@@ -889,5 +833,4 @@ def visualize(grid):
     ax.set_xlabel("East [m]")
     ax.set_ylabel("North [m]")
     plt.grid(False)
-    # plt.savefig('vel_grid.pdf', format='pdf')
     plt.show()

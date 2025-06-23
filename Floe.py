@@ -70,14 +70,12 @@ class Floe_Manager:
     def print_lost_floes(self):
         for floe in self.lost_floes.values():
             floe.print()
-
-    # path: r"C:\Users\bendi\Documents\Master\Bendik dataset\IceDrift\calib\int.yaml"
+    
+    # get the intrinsic camera variables, h
     def get_intrinsics(self, path):
         # Camera calibration parameters
         with open(path, 'r') as int_yaml:
             cam_params = yaml.safe_load(int_yaml)
-            
-            #dist_coeffs = np.array(cam_params["distortion_coeffs"])
             fx, fy, cx, cy = cam_params["intrinsics"]
             intrinsic_matrix = np.array([
                 [fx, 0, cx],
@@ -86,26 +84,24 @@ class Floe_Manager:
             ])
             w, h = tuple(cam_params["resolution"])
 
-        # Some nice preprocessing    
+        # preprocessing    
         u, v = np.meshgrid(np.arange(w), np.arange(h))
         uv1 = np.vstack((u.flatten(), v.flatten(), np.ones_like(u.flatten()))).T  # Pixel coordinates
         r_cam = (np.linalg.inv(intrinsic_matrix) @ uv1.T)  # Pixel vector in cam frame
 
         return w, h, intrinsic_matrix, r_cam
 
-    # data path: r"C:\Users\bendi\Documents\mine python prosjekter\test\12345678"
-    # intrinsics path: r"C:\Users\bendi\Documents\Master\Bendik dataset\IceDrift\calib\int.yaml"
+    # to create the main Raster object
     def create_main_raster(self, data_path, w, h, intrinsic_matrix, r_cam):
         # Load image and pose
         image_path = os.path.join(data_path, "binary.png")
         pose_path = os.path.join(data_path, "pose.npy")
-        distance_path = os.path.join(data_path, "distance_map.npy")
 
         image = cv2.imread(image_path)
         pose = np.load(pose_path)  # 4x4 pose matrix
         pose_inv = np.linalg.inv(pose)
 
-        # === Create distance_map ===
+        # Creating a distance map
         x, y = np.meshgrid(np.arange(w), np.arange(h))
         pixels = np.vstack((x.flatten(), y.flatten(), np.ones_like(x.flatten())))  # shape (3, N)
         r_cam_full = np.linalg.inv(intrinsic_matrix) @ pixels                      # shape (3, N)
@@ -119,9 +115,8 @@ class Floe_Manager:
 
         dist = np.where(r_world[2] <= 1e-9, np.inf, np.linalg.norm(r_world[:2], axis=0))
         distance_map = dist.reshape((h, w))
-        np.save(distance_path, distance_map)
 
-        # === Continue with raster projection ===
+        # raster projection, using the distanse map
         valid_distance = distance_map < MAX_DIST
         r_world = R @ r_cam[:, valid_distance.flatten()]
         scale = -t[2] / r_world[2]
@@ -162,8 +157,7 @@ class Floe_Manager:
 
         return Raster(image, resolution, north_max, east_min)
     
-    # gets the params to create so it only contains white pixels. padding in pixels
-    # returnerer det som skal bli Floe's variabel. Lager nye Rasters fra dette i get_detections.
+    # gets the parameters to create a cropped Raster of isolated_image belonging to main_raster
     def get_cropped_raster_params(self, isolated_image, main_raster, padding = 20):
         coords = np.column_stack(np.where(isolated_image > 0))  # (row, col) format
 
@@ -404,10 +398,10 @@ class Floe_Manager:
         # prev_floes: list of known floes in floe_manager.active_floes
         # curr_floes: list of newly detected floes, retruned from get_detections
 
-        cost_matrix = np.full((len(prev_floes), len(curr_floes)), np.inf)  # Initialize with large values
+        cost_matrix = np.full((len(prev_floes), len(curr_floes)), np.inf)  # Initialize the cost matrix with large values
 
-        DIST = 20 # distance in meters
-        MAX_IOU = 0.9  # the lower the better. from 0 to 1
+        DIST = 20 # maximum distance [meters]
+        MAX_IOU = 0.9  # maximum Intersetion over Union. 0 is 100% overlap, 1 is no overlap at all
 
         for i, prev_floe in enumerate(prev_floes):
             y_pred = prev_floe.predicted_state[:2].flatten()  # Predicted position [x y]
@@ -430,7 +424,7 @@ class Floe_Manager:
                 if iou_cost > MAX_IOU:
                     continue  # Leave cost as np.inf (won't be matched)
                 
-                # Combine costs (you can weight IoU if necessary)
+                # Combining costs, weighting IoU ten times more
                 cost_matrix[i, j] = dist_E + 10 * iou_cost
 
         return cost_matrix
@@ -448,7 +442,6 @@ class Floe_Manager:
                 continue
 
             floe_id = floe_ids[prev_idx]
-            # print(f"Matched Floe ID: {floe_id} with Detection Index: {curr_idx}")
 
             prev_floe = self.active_floes[floe_id] # Floe in prev image
             curr_floe = detections[curr_idx] # The same floe in the curr image
@@ -473,9 +466,8 @@ class Floe_Manager:
                 curr_image = self.apply_blur(curr_image, kernel)
 
 
-                # OPTION 1: Optical Flow
+                # Optical Flow
                 avg_du, avg_dv, good_prev, good_curr = self.optical_flow(prev_image, curr_image)
-                fplt.visualize_optical_flow(prev_image, curr_image, avg_du, avg_dv, good_prev, good_curr)
 
                 prev_meas_x, prev_meas_y = prev_floe.measurements[-1]
                 curr_x = prev_meas_x + avg_du * prev_floe.raster.resolution
@@ -498,7 +490,7 @@ class Floe_Manager:
     
     # Handles floes that were not matched. if that floe was an active, make it lost
     def handle_unmatched_floes(self, assigned_prev_floe_IDs):
-        unmatched_prev_floe_IDs = set(self.active_floes.keys()) - assigned_prev_floe_IDs # the IDs that were not found in current image
+        unmatched_prev_floe_IDs = set(self.active_floes.keys()) - assigned_prev_floe_IDs # the IDs that were not found in the current image
 
         for unmatched_ID in unmatched_prev_floe_IDs:
             print("Floe lost, removing it")
@@ -542,7 +534,7 @@ class Floe_Manager:
 
         return cost_matrix
     
-    # TODO: remeber to comment
+    # the assosaition step
     def associate(self, curr_raster):
         detections = self.get_detections(curr_raster) # List of Floe objects
 
@@ -571,7 +563,6 @@ class Floe_Manager:
         valid_cols = np.any(np.isfinite(cost_matrix), axis=0) # columns that have at least one valid entry
 
         filtered_cost_matrix = cost_matrix[valid_rows][:, valid_cols] # keeps only valid rows and cols
-        # print("Filtered cost matrix:", filtered_cost_matrix)
         valid_floe_ids = [floe_ids[i] for i, v in enumerate(valid_rows) if v]
         valid_detection_idxs = [j for j, v in enumerate(valid_cols) if v]
 
@@ -581,8 +572,8 @@ class Floe_Manager:
         # Map back to full indices
         assigned_prev_floe_IDs = {valid_floe_ids[i] for i in prev_match}
         assigned_curr_floe_idxs = {valid_detection_idxs[j] for j in curr_match}
-        # ------------------------------
 
+        # based on the assignment, handle the floes
         self.update_matched_floes(prev_match, curr_match, detections, valid_floe_ids, cost_matrix)
         self.handle_unmatched_floes(assigned_prev_floe_IDs)
         self.create_new_floes(assigned_curr_floe_idxs, detections)
@@ -643,7 +634,7 @@ class Floe_Manager:
 class Kalman_Filter:
     def __init__(self, x0):
         T = 5
-        sigma_a = 0.0001
+        sigma_a = 0.00045
         self.x = x0
         self.T = T
         self.A = np.array([[1, 0, T, 0],
@@ -717,7 +708,7 @@ class Floe:
 
         self.lost_frames = 0
     
-    # trashing a floe for saving memory. Dont know if needed really
+    # trashing a floe for saving memory
     def trash(self):
         self.id = None
         self.kalmanfilter = None

@@ -246,21 +246,22 @@ class Simulator:
             cv2.fillPoly(self.GT_map, [floe.contour], color=255)
             floe.add_GT_state()
 
-    def create_raster(self, u_std, v_std, u_mean=0, v_mean=0):
-        # Generates a raster image from GT with added pixel noise
-        # in:  u_std, v_std, u_mean, v_mean [pixels]
-        # out: Raster object
+    def create_raster(self, sigma_m):
+        # Create a copy of the GT map to add noise
         noisy_image = np.zeros_like(self.GT_map)
 
+        # Generate random noise for each floe
         for floe in self.active_floes.values():
-            du = int(np.random.normal(u_mean, u_std))
-            dv = int(np.random.normal(v_mean, v_std))
+            du = int(np.random.normal(sigma_m, sigma_m))
+            dv = int(np.random.normal(sigma_m, sigma_m))
 
-            noise = np.array([du, dv])
-            noisy_contour = (floe.contour + noise).astype(np.int32)
-            noisy_center = floe.get_center() + noise
+            # Apply the same noise to all points in the contour
+            noise_vector = np.array([du, dv])
+            noisy_contour = (floe.contour + noise_vector).astype(np.int32) # move the floe contour by the noise vector
+            noisy_center = floe.get_center() + noise_vector # update the noisy center
 
-            floe.add_noisy_state(noisy_center)
+            floe.add_noisy_state(noisy_center) # store the noisy state for later
+
             cv2.fillPoly(noisy_image, [noisy_contour], color=255)
-
+        
         return Raster(noisy_image, self.resolution, self.east_min, self.north_max)

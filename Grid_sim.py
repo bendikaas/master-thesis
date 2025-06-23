@@ -1,9 +1,4 @@
 import math
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-# old big grid
-# north_min = 2416000, north_max = 2419000, east_min = 20590000, east_max = 20593000
 
 # coordinates are in "EPSG:32630"
 class Grid:
