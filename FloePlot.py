@@ -68,16 +68,17 @@ def visualize_optical_flow(prev_image, curr_image, avg_du, avg_dv, good_prev_key
     plt.show()
 
 def plot_paths(floe_manager):
-    dataset = rasterio.open("T30XVR_20240911T154809_TCI.jp2")  # EPSG:32630
+    dataset = rasterio.open("satelite_image.tif")  # EPSG:32630
 
-    min_x, max_x = floe_manager.grid.east_min, floe_manager.grid.east_max
-    min_y, max_y = floe_manager.grid.north_min, floe_manager.grid.north_max
-    bbox = box(min_x, min_y, max_x, max_y)
-    cropped_image, cropped_transform = mask(dataset, [mapping(bbox)], crop=True)
+    # Read image and transform
+    image = dataset.read()
+    transform = dataset.transform
 
+    # Plot the image
     fig, ax = plt.subplots(figsize=(10, 10))
-    show(cropped_image, transform=cropped_transform, ax=ax)
+    show(image, transform=transform, ax=ax)
 
+    # Coordinate transformer (if needed)
     transformer = Transformer.from_crs("EPSG:6052", "EPSG:32630", always_xy=True)
     palette = sns.color_palette("colorblind", n_colors=100)
 
@@ -135,16 +136,17 @@ def plot_floe_paths_with_uncertainties(floe_manager):
     chi2_val = 5.991
     scale = np.sqrt(chi2_val)
 
-    dataset = rasterio.open("T30XVR_20240911T154809_TCI.jp2")  # EPSG:32630
+    dataset = rasterio.open("satelite_image.tif")  # EPSG:32630
 
-    min_x, max_x = floe_manager.grid.east_min, floe_manager.grid.east_max
-    min_y, max_y = floe_manager.grid.north_min, floe_manager.grid.north_max
-    bbox = box(min_x, min_y, max_x, max_y)
-    cropped_image, cropped_transform = mask(dataset, [mapping(bbox)], crop=True)
+    # Read image and transform
+    image = dataset.read()
+    transform = dataset.transform
 
+    # Plot the image
     fig, ax = plt.subplots(figsize=(10, 10))
-    show(cropped_image, transform=cropped_transform, ax=ax)
+    show(image, transform=transform, ax=ax)
 
+    # Coordinate transformer (if needed)
     transformer = Transformer.from_crs("EPSG:6052", "EPSG:32630", always_xy=True)
     palette = sns.color_palette("colorblind", n_colors=100)
 

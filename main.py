@@ -5,6 +5,9 @@ import os
 intrinsics_path = r"YOUR OWN PATH TO THE INTRINSICS FILE CALLED intrinsics.yaml"
 workspace = r"YOUR OWN PATH TO THE FOLDER CONTAINING THE REAL DATA SET"
 
+intrinsics_path = r"C:\Users\bendi\Documents\Master\Bendik dataset\IceDrift\calib\intrinsics.yaml"
+workspace = r"C:\Users\bendi\Documents\Master\data set"
+
 # SCENARIO 1. to predict the path, create a larger end_id. Remember that the end_id must be a valid folder
 start_id = 1726069689 # the same timestep that the satelite image was captured 
 end_id = 1726069764
